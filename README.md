@@ -173,6 +173,23 @@ Outputs: `results-path`, `passed`, `failed`, `total`, `all-passed`.
 
 See the full [API reference](docs/API.md).
 
+## Performance
+
+The golden and structural runners are pure-CPU and run on every PR, so they have
+to be fast enough to never block one. Measured (Node 24, 1000 synthetic cases,
+stub `llm` — no provider call):
+
+| Runner | 1000 cases | per case |
+|---|---|---|
+| Structural (json-schema + regex + contains) | **3.3 ms** | ~3.3 µs |
+| Golden (Levenshtein similarity) | **29.8 ms** | ~30 µs |
+
+A full PR's worth of deterministic checks is single-digit-to-tens of
+milliseconds — the eval gate never becomes the slow step. Reproduce with
+`node bench/runners.mjs` (no API key). The LLM-judge runner does call a provider;
+its latency and per-eval cost are benchmarked separately in `bench/judge.mjs`
+(run on demand — see that file's header).
+
 ## License
 
 Apache-2.0
