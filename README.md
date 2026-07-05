@@ -186,9 +186,25 @@ stub `llm` — no provider call):
 
 A full PR's worth of deterministic checks is single-digit-to-tens of
 milliseconds — the eval gate never becomes the slow step. Reproduce with
-`node bench/runners.mjs` (no API key). The LLM-judge runner does call a provider;
-its latency and per-eval cost are benchmarked separately in `bench/judge.mjs`
-(run on demand — see that file's header).
+`node bench/runners.mjs` (no API key).
+
+### LLM-judge cost
+
+The judge is the one runner that spends money — it calls a model to score each
+case. `bench/judge.mjs` prices exactly that: the real `llmJudge` runner with a
+free stub `llm` (the "AI under test") and a real Claude Haiku judge. Measured in
+CI against `claude-haiku-4-5` over 8 cases (workflow_dispatch, one call/case):
+
+| Metric | Result |
+|---|---|
+| Cost per judged case | **$0.00047** (≈ $0.47 per 1,000 cases) |
+| Judge latency p50 / avg | **1410 ms / 1305 ms** |
+| Tokens (8 cases) | 1,659 in / 413 out → **$0.0037 total** |
+
+So a 200-case judged suite runs about **9 cents**. Reproduce with
+`ANTHROPIC_API_KEY=… node bench/judge.mjs`, or trigger the `judge-cost` job in
+[`benchmark.yml`](.github/workflows/benchmark.yml) — manual dispatch only, so
+fork PRs can't touch the key and every paid run is deliberate.
 
 ## License
 
