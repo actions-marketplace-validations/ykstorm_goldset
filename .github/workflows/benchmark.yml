@@ -27,3 +27,25 @@ jobs:
         with:
           name: free-runners
           path: bench/results.txt
+
+  # Paid: one Claude Haiku call per judge case. Manual dispatch ONLY — never on
+  # push/PR — so fork PRs can't touch the secret and the cost is opt-in. The key
+  # is passed as an env secret, read from process.env, never logged.
+  judge-cost:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+      - name: Run LLM-judge cost benchmark (Claude Haiku)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node bench/judge.mjs | tee bench/judge-results.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: judge-cost
+          path: bench/judge-results.json
