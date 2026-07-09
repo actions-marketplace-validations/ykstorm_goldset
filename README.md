@@ -2,6 +2,8 @@
 
 **Lock your AI app's behavior — golden datasets, LLM-as-judge, and structural assertions in CI.**
 
+> A prompt edit is a code change with no compiler — it fixes one behavior and silently regresses another, and nothing fails until a user notices.
+
 [![npm](https://img.shields.io/npm/v/@ykstormsorg/goldset.svg)](https://npmjs.com/package/@ykstormsorg/goldset)
 [![CI](https://github.com/ykstorm/goldset/actions/workflows/ci.yml/badge.svg)](https://github.com/ykstorm/goldset/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
@@ -11,6 +13,7 @@
 
 ## Contents
 
+- [Why this exists](#why-this-exists)
 - [Why Goldset?](#why-goldset)
 - [Install](#install)
 - [Quickstart](#quickstart)
@@ -20,6 +23,20 @@
 - [Architecture](docs/architecture.md)
 - [Setup guide](docs/SETUP.md)
 - [Contributing](CONTRIBUTING.md)
+
+---
+
+## Why this exists
+
+Goldset started after a wording change in one section of Homesty's production
+system prompt silently shifted refusal behavior three sections away — the kind of
+regression no unit test catches and no user forgives. The answer was to gate
+prompt-adjacent merges on behavioral evals the same way type checks gate code:
+the runners execute in CI, post a delta-vs-base comment on the pull request, and
+**block the merge** when a golden case drifts, a judge rubric fails, or an output
+shape breaks. Not a dashboard someone remembers to open — a check that fails.
+The judge itself is calibrated against a human-labeled set before it earns that
+gate authority, so a nondeterministic scorer never gets to fail a build on a whim.
 
 ---
 

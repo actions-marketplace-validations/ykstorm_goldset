@@ -28,3 +28,6 @@ coverage/
 # Action output (written at runtime)
 goldset-results.json
 *.tgz
+
+# local pre-polish README backup (not tracked)
+README.pre-polish.md
