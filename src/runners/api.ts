@@ -176,6 +176,97 @@ Respond with a JSON object containing "score" (0-5) and "reason" (string).`;
   };
 }
 
+// ─── grounding (faithfulness) ─────────────────────────────────────────────────
+// Catches RAG hallucination: the model's answer must be supported by the
+// provided context. A judge scores how grounded the output is in `context`;
+// unsupported/invented claims lower the score. Same judge-scored shape as
+// llmJudge, but with an explicit context set instead of a free-form rubric.
+
+export interface GroundingCase {
+  id: string;
+  input: string;
+  /** The retrieved context the answer must stay faithful to. */
+  context: string[];
+}
+
+export interface GroundingConfig {
+  llm: LLMFn;
+  judge: JudgeFn;
+  passThreshold?: number;
+  verbose?: boolean;
+}
+
+export interface GroundingCaseResult {
+  id: string;
+  passed: boolean;
+  score: number;
+  output: string;
+  reasoning?: string;
+  passThreshold: number;
+}
+
+export interface GroundingResult {
+  runner: 'grounding';
+  cases: GroundingCaseResult[];
+  summary: {
+    passed: number;
+    failed: number;
+    avgScore: number;
+  };
+}
+
+export async function grounding(
+  cases: GroundingCase[],
+  config: GroundingConfig
+): Promise<GroundingResult> {
+  const { llm, judge } = config;
+  const passThreshold = config.passThreshold ?? 3;
+
+  const results: GroundingCaseResult[] = [];
+  for (const tc of cases) {
+    const output = await Promise.resolve(llm(tc.input));
+    const judgePrompt = `You are a strict faithfulness checker. Using ONLY the context below, decide whether every factual claim in the answer is supported by that context. Claims that are invented or not backed by the context (hallucinations) must lower the score.
+
+Context:
+${tc.context.map((c, i) => `[${i + 1}] ${c}`).join('\n')}
+
+Question: ${tc.input}
+Answer: ${output}
+
+Score 0 (the answer makes claims the context does not support) to 5 (every claim is grounded in the context). Respond with a JSON object containing "score" (0-5) and "reason" (string).`;
+
+    const judgeText = await Promise.resolve(judge(judgePrompt));
+
+    let score = 0;
+    let reasoning: string | undefined;
+    try {
+      const parsed = JSON.parse(judgeText) as { score: number; reason?: string };
+      score = typeof parsed.score === 'number' ? parsed.score : 0;
+      reasoning = parsed.reason;
+    } catch {
+      // Inconclusive — judge did not return parseable JSON. Mark as failed.
+      score = 0;
+    }
+
+    const passed = score >= passThreshold;
+    if (config.verbose) {
+      console.log(`[grounding] ${passed ? '✓' : '✗'} ${tc.id} (score ${score}/5)`);
+    }
+    results.push({ id: tc.id, passed, score, output, reasoning, passThreshold });
+  }
+
+  const passed = results.filter((r) => r.passed).length;
+  const avgScore = results.length
+    ? round2(results.reduce((s, r) => s + r.score, 0) / results.length)
+    : 0;
+
+  return {
+    runner: 'grounding',
+    cases: results,
+    summary: { passed, failed: results.length - passed, avgScore },
+  };
+}
+
 // ─── structural ──────────────────────────────────────────────────────────────
 
 export interface StructuralCase {
@@ -246,11 +337,12 @@ export interface EvalResult {
     goldenDataset?: GoldenResult;
     llmJudge?: JudgeResult;
     structural?: StructuralResult;
+    grounding?: GroundingResult;
   };
   passed: boolean;
 }
 
-type AnyRunnerResult = GoldenResult | JudgeResult | StructuralResult;
+type AnyRunnerResult = GoldenResult | JudgeResult | StructuralResult | GroundingResult;
 
 /**
  * Combine one or more runner results into the shared `EvalResult` shape that
