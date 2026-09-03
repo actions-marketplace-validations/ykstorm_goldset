@@ -3,6 +3,7 @@ export {
   goldenDataset,
   llmJudge,
   structural,
+  grounding,
   runEval,
   toEvalResult,
 } from './runners/api';
@@ -21,6 +22,10 @@ export type {
   StructuralConfig,
   StructuralCaseResult,
   StructuralResult,
+  GroundingCase,
+  GroundingConfig,
+  GroundingCaseResult,
+  GroundingResult,
   EvalResult,
 } from './runners/api';
 

@@ -17,7 +17,7 @@
 - [Why Goldset?](#why-goldset)
 - [Install](#install)
 - [Quickstart](#quickstart)
-- [Three runners](#three-runners)
+- [Four runners](#four-runners)
 - [GitHub Action](#github-action)
 - [API reference](docs/API.md)
 - [Architecture](docs/architecture.md)
@@ -47,13 +47,14 @@ Most AI eval tools are dashboards with no CI integration. Goldset is the opposit
 - **Evals as code** — sit next to your app in the same repo
 - **GitHub Action native** — PR diff comments, merge-blocking on regression
 - **Provider agnostic** — plug in any `llm: (input) => Promise<string>`
-- **Three orthogonal runners** — catch three completely different failure modes
+- **Four orthogonal runners** — catch four completely different failure modes
 
 | Runner | What it catches | Best for |
 |--------|-----------------|----------|
 | `goldenDataset` | Output drifted from canonical answer | FAQ, refusal correctness, deterministic Q&A |
 | `llmJudge` | Behavior regression on open-ended outputs | Tone, helpfulness, brand voice, language matching |
 | `structural` | Output shape broke | Function calling, structured generation, JSON schema |
+| `grounding` | Answer not supported by context (hallucination) | RAG faithfulness, refusal-first retrieval, citation checks |
 
 ---
 
@@ -180,13 +181,14 @@ Outputs: `results-path`, `passed`, `failed`, `total`, `all-passed`.
 
 ---
 
-## Three runners
+## Four runners
 
 | Runner | Function | Catches |
 |--------|----------|---------|
 | Golden dataset | `goldenDataset(cases, { llm, threshold })` | Output drifted from the canonical answer (Levenshtein similarity vs a threshold) |
 | LLM-as-judge | `llmJudge(cases, { llm, judge, rubric })` | Behavior regression on open-ended outputs (a second LLM scores against a rubric) |
 | Structural | `structural(cases, { llm, assertions })` | Output shape broke (JSON schema, regex, substring, tool-call shape) |
+| Grounding | `grounding(cases, { llm, judge })` | RAG hallucination — the answer makes claims the provided `context` does not support (faithfulness) |
 
 See the full [API reference](docs/API.md).
 
